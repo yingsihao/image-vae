@@ -157,8 +157,6 @@ reconstruction_function.size_average = False
 
 def loss_function(recon_x, x, mu, logvar):
     BCE = reconstruction_function(recon_x, x)
-    # https://arxiv.org/abs/1312.6114 (Appendix B)
-    # 0.5 * sum(1 + log(sigma^2) - mu^2 - sigma^2)
     KLD_element = mu.pow(2).add_(logvar.exp()).mul_(-1).add_(1).add_(logvar)
     KLD = torch.sum(KLD_element).mul_(-0.5)
 
@@ -224,6 +222,7 @@ if __name__ == '__main__':
             imgs['test'].append(np.array(img)[4:132, 4:132])
     for split in ['train', 'test']:
         tmp = np.array(imgs[split])
+        tmp = tmp * (1.0 / 255.0)
         #print(tmp.shape)
         tmp = torch.from_numpy(tmp)
         tmp = tmp.permute(0, 3, 1, 2)
@@ -287,6 +286,9 @@ if __name__ == '__main__':
             # forward
             recon_batch, mu, logvar = model(inputs)
 
+            #inputs_show = inputs.permute(0, 2, 3, 1)
+            #recon_batch_show = recon_batch.permute(0, 2, 3, 1)
+
             torchvision.utils.save_image(inputs.data, './resimgs/Epoch_{}_data.jpg'.format(epoch), nrow=8, padding=2)
             torchvision.utils.save_image(recon_batch.data, './resimgs/Epoch_{}_recon.jpg'.format(epoch), nrow=8, padding=2)
 
@@ -298,7 +300,7 @@ if __name__ == '__main__':
         logger.scalar_summary('test-loss-r', test_loss, step)
         # logger.scalar_summary('test-loss-kl', loss_kl.data[0], step)
 
-'''
+        '''
         # visualization
         for split in ['train', 'test']:
             inputs, lengths = iter(loaders[split]).next()
@@ -315,12 +317,11 @@ if __name__ == '__main__':
             # logger
             logger.image_summary('{0}-outputs'.format(split), outputs, step)
             logger.image_summary('{0}-targets'.format(split), targets, step)
+        '''
 
         # snapshot
         save_snapshot(os.path.join(exp_path, 'latest.pth'),
                       model = model, optimizer = optimizer, epoch = epoch + 1)
-
         if args.snapshot != 0 and (epoch + 1) % args.snapshot == 0:
             save_snapshot(os.path.join(exp_path, 'epoch-{0}.pth'.format(epoch + 1)),
                           model = model, optimizer = optimizer, epoch = epoch + 1)
-'''
